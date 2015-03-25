@@ -89,13 +89,13 @@ func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	fmt.Fprint(w, string(response))
 }
 
-func main() {
-	fmt.Printf("hello, world\n")
+func main() {	
 	router := httprouter.New()
+	
+	router.ServeFiles("/web/*filepath", http.Dir("web"))
 	
 	router.GET("/", Index)
 	router.GET("/hello/:name", Hello)
 	router.GET("/fetch/:page/:tags", FetchPuppies)
-
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
