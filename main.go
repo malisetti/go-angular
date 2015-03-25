@@ -28,6 +28,7 @@ func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {	
 	tags := ps.ByName("tags")
+	page := ps.ByName("page")
 	
 	baseUrl, err := url.Parse(FlickrEndPoint)
 	if err != nil {
@@ -37,8 +38,11 @@ func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	params := url.Values{}
 	params.Add("method", FlickrQuery)
 	params.Add("api_key", FlickrKey)
-	//params.Add("text", "")
 	params.Add("tags", tags)
+	params.Add("per_page", "10")
+	params.Add("page", page)
+	params.Add("safe_search", "2")
+	params.Add("sort", "date-posted-desc")
 		
 	baseUrl.RawQuery = params.Encode()
 	
@@ -67,6 +71,7 @@ func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	//if stat is "ok"	
 	if flickrResponse.Stat != "ok" {
 		println(flickrResponse.Err.Msg)
+		//return error message
 	}	
 	flickrPhotos := flickrResponse.Photos.Photos
 	for i, ph := range flickrPhotos {
@@ -90,7 +95,7 @@ func main() {
 	
 	router.GET("/", Index)
 	router.GET("/hello/:name", Hello)
-	router.GET("/fetch/:tags", FetchPuppies)
+	router.GET("/fetch/:page/:tags", FetchPuppies)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
