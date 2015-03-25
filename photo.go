@@ -25,12 +25,6 @@ type SearchResponse struct {
 	Photos  []Photo `xml:"photo"`
 }
 
-// A Flickr user.
-type User struct {
-	UserName string `xml:"username,attr"`
-	NSID     string `xml:"nsid,attr"`
-}
-
 // Represents a Flickr photo.
 type Photo struct {
 	ID       string `xml:"id,attr"`
@@ -40,10 +34,15 @@ type Photo struct {
 	Farm     string `xml:"farm,attr"`
 	Title    string `xml:"title,attr"`
 	IsPublic string `xml:"ispublic,attr"`
-	Width_T  string `xml:"width_t,attr"`
-	Height_T string `xml:"height_t,attr"`
-	// Photo's aspect ratio: width divided by height.
-	Ratio float64
+	IsFriend string `xml:"isfriend,attr"`
+	IsFamily string `xml:"isfamily,attr"`
+	Thumbnail_T string `xml:"thumbnail_t,attr"`
+	Large_T string `xml:"large_t,attr"`
+}
+
+type flickrError struct {
+	Code string `xml:"code,attr"`
+	Msg string `xml:"msg,attr"`
 }
 
 // Returns the URL to this photo in the specified size.
@@ -54,10 +53,4 @@ func (p *Photo) URL(size string) string {
 	}
 	return fmt.Sprintf("http://farm%s.static.flickr.com/%s/%s_%s_%s.jpg",
 		p.Farm, p.Server, p.ID, p.Secret, size)
-}
-
-type PhotoSet struct {
-	ID          string `xml:"id,attr"`
-	Title       string `xml:"title"`
-	Description string `xml:"description"`
 }
