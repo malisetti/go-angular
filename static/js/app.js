@@ -5,7 +5,8 @@
 
     app.controller('PuppyCtrl', ['$scope', '$http', function ($scope, $http) {
             $scope.main = {
-              page: 1
+              page: 1,
+              pages: 1
             };
 
             $scope.response = {}
