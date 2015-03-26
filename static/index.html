@@ -4,16 +4,20 @@
         <meta charset="UTF-8">
         <title> All the cuteness in the world </title>
         <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
+        <link href="css/ngDialog.min.css" rel="stylesheet" type="text/css">
         <link href="css/app.css" rel="stylesheet" type="text/css">
+        <link href="css/icono.min.css" rel="stylesheet" type="text/css">
     </head>
 
     <body class="container" ng-controller="PuppyCtrl">
-        <h1>{{ response.total }}</h1>
+        <h1>Total images {{ response.total }}</h1>
 
         <ul class="list-unstyled">
             <li class="row" ng-repeat="pup in response.images">
-                <h3>{{ pup.title }}</h3>
-                <img ng-src="{{ pup.thumbnail }}" />
+                <img ng-src="{{ pup.thumbnail }}" data-ng-click="open(pup)" alt="{{ pup.title }}"/>
+                <span>{{ pup.upvotes }}<a class="icono-smile"></a></span>
+                <span>{{ pup.downvotes }}<a class="icono-frown"></a></span>
+                <p>{{ pup.title }}</p>
                 <br class="clearfix" />
             </li>
         </ul>
@@ -22,6 +26,7 @@
         <button ng-hide='main.page >= main.pages' ng-click='nextPage()'>Next</button>
 
         <script type="text/javascript" src="js/angular.min.js"></script>
+        <script type="text/javascript" src="js/ngDialog.min.js"></script>
         <script type="text/javascript" src="js/app.js"></script>
     </body>
 </html>

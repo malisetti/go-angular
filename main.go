@@ -51,6 +51,26 @@ func errorHandler(f func(w http.ResponseWriter, r *http.Request) error) http.Han
 	}
 }
 
+func UpdatePuppy(w http.ResponseWriter, r *http.Request) {
+	var v Vote
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		//return badRequest{err}
+
+		println("some error");
+	}
+
+	imageManager := NewImageManager()
+	println(v.ID)
+	image, exists := imageManager.Find(v.ID)
+
+	if exists == true{
+		println(image.ID)
+	}else{
+		println("does not exist")
+	}
+
+}
+
 func ListPuppies(w http.ResponseWriter, r *http.Request) {
 	page := mux.Vars(r)["page"]
 	if page == "" {
@@ -130,6 +150,9 @@ func main() {
 
 	pupsPerPage := r.Path(PathPrefix + "/{page}").Subrouter()
 	pupsPerPage.Methods("GET").HandlerFunc(ListPuppies)
+
+	pupsUpdate := r.Path(PathPrefix).Subrouter()
+	pupsUpdate.Methods("PUT").HandlerFunc(UpdatePuppy)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 	http.Handle("/", r)

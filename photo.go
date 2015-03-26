@@ -51,7 +51,8 @@ type Image struct {
 	Title     string `json:"title"`
 	Thumbnail string `json:"thumbnail"`
 	Large     string `json:"large"`
-	Votes     int    `json:"votes"`
+	UpVotes     int    `json:"upvotes"`
+	DownVotes     int    `json:"downvotes"`
 }
 
 type PuppiesResponse struct {
@@ -64,6 +65,11 @@ type PuppiesResponse struct {
 
 type ImageManager struct {
 	images []*Image
+}
+
+type Vote struct {
+	ID string
+	VT bool //true is up, false is down
 }
 
 func NewImageManager() *ImageManager {
@@ -82,7 +88,7 @@ func (m *ImageManager) GetPuppiesResponse(searchResponse *SearchResponse) *Puppi
 }
 
 func (m *ImageManager) NewImage(photo Photo) *Image {
-	return &Image{photo.ID, photo.Title, photo.URL(SizeThumbnail), photo.URL(SizeLarge), 0}
+	return &Image{photo.ID, photo.Title, photo.URL(SizeThumbnail), photo.URL(SizeLarge), 0, 0}
 }
 
 func (m *ImageManager) Save(image *Image) error {
@@ -96,20 +102,31 @@ func (m *ImageManager) Save(image *Image) error {
 	return nil
 }
 
-func (m *ImageManager) Update(image *Image, upOrDown bool) int {
+func (m *ImageManager) Find(ID string) (*Image, bool) {
+	for _, im := range m.images {
+		if im.ID == ID {
+			return im, true
+		}
+	}
+
+	return nil, false
+}
+
+func (m *ImageManager) Update(image *Image, upOrDown bool) (int, int) {
 	if upOrDown == true {
-		image.Votes++
+		image.UpVotes++
 	} else {
-		image.Votes--
+		image.DownVotes--
 	}
 
 	for _, im := range m.images {
 		if im.ID == image.ID {
-			im.Votes = image.Votes
+			im.UpVotes = image.UpVotes
+			im.DownVotes = image.DownVotes
 		}
 	}
 
-	return image.Votes
+	return image.UpVotes, image.DownVotes
 }
 
 // All returns the list of all the Tasks in the TaskManager.
