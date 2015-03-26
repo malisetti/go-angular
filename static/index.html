@@ -10,14 +10,17 @@
     </head>
 
     <body class="container" ng-controller="PuppyCtrl">
-        <h1>Total images {{ response.total }}</h1>
+        <h1>Cute puppies, cats and remaining</h1>
+        <h2>Total images {{ response.total }}</h2>
 
         <ul class="list-unstyled">
             <li class="row" ng-repeat="pup in response.images">
-                <img ng-src="{{ pup.thumbnail }}" data-ng-click="open(pup)" alt="{{ pup.title }}"/>
-                <span>{{ pup.upvotes }}<a class="icono-smile"></a></span>
-                <span>{{ pup.downvotes }}<a class="icono-frown"></a></span>
-                <p>{{ pup.title }}</p>
+                <figure>
+                  <img ng-src="{{ pup.thumbnail }}" data-ng-click="open(pup)" alt="{{ pup.title }}"/>
+                  <span>{{ pup.upvotes }}<a class="icono-smile" ng-click="upvote(pup)"></a></span>
+                  <span>{{ pup.downvotes }}<a class="icono-frown" ng-click="downvote(pup)"></a></span>
+                  <figcaption>{{ pup.title }}</figcaption>
+                </figure>
                 <br class="clearfix" />
             </li>
         </ul>
