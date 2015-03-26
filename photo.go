@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Image sizes supported by Flickr.  See
@@ -54,10 +55,10 @@ type Image struct {
 }
 
 type PuppiesResponse struct {
-	Page    string   `json:"page"`
-	Pages   string   `json:"pages"`
-	PerPage string   `json:"perpage"`
-	Total   string   `json:"total"`
+	Page    int      `json:"page"`
+	Pages   int      `json:"pages"`
+	PerPage int      `json:"perpage"`
+	Total   int      `json:"total"`
 	Images  []*Image `json:"images"`
 }
 
@@ -70,7 +71,14 @@ func NewImageManager() *ImageManager {
 }
 
 func (m *ImageManager) GetPuppiesResponse(searchResponse *SearchResponse) *PuppiesResponse {
-	return &PuppiesResponse{searchResponse.Page, searchResponse.Pages, searchResponse.PerPage, searchResponse.Total, m.images}
+	page, err := strconv.Atoi(searchResponse.Page)
+	pages, err := strconv.Atoi(searchResponse.Pages)
+	perPage, err := strconv.Atoi(searchResponse.PerPage)
+	total, err := strconv.Atoi(searchResponse.Total)
+	if err != nil {
+		return nil
+	}
+	return &PuppiesResponse{page, pages, perPage, total, m.images}
 }
 
 func (m *ImageManager) NewImage(photo Photo) *Image {

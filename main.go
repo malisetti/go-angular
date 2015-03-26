@@ -132,9 +132,10 @@ func main() {
 	pupsPerPage := r.Path(PathPrefix + "/{page}").Subrouter()
 	pupsPerPage.Methods("GET").HandlerFunc(ListPuppies)
 
-	http.Handle("/", http.FileServer(http.Dir("static")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
+	http.Handle("/", r)
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":8080", nil)
 }
 
 func checkErr(err error) {
