@@ -1,35 +1,66 @@
 // go-angular project main.go
 package main
 
+/*
+"database/sql"
+"fmt"
+*/
 import (
-	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"log"
-	"net/http"
-	"io/ioutil" 
-	"net/url"
 	"encoding/json"
 	"encoding/xml"
+	"github.com/gorilla/mux"
+	_ "github.com/mattn/go-sqlite3"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 )
 
 const (
-	FlickrEndPoint = "https://api.flickr.com/services/rest";
-	FlickrQuery = "flickr.photos.search";
-	FlickrKey = "300d436fa36986e197efe2a62682e05b";
+	FlickrEndPoint = "https://api.flickr.com/services/rest"
+	FlickrQuery    = "flickr.photos.search"
+	FlickrKey      = "300d436fa36986e197efe2a62682e05b"
+	DatabaseName   = "puppies.db"
+	PathPrefix     = "/pups"
 )
 
-func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Fprint(w, "Welcome!\n")
+var imageManager = NewImageManager()
+
+// badRequest is handled by setting the status code in the reply to StatusBadRequest.
+type badRequest struct{ error }
+
+// notFound is handled by setting the status code in the reply to StatusNotFound.
+type notFound struct{ error }
+
+// errorHandler wraps a function returning an error by handling the error and returning a http.Handler.
+// If the error is of the one of the types defined above, it is handled as described for every type.
+// If the error is of another type, it is considered as an internal error and its message is logged.
+func errorHandler(f func(w http.ResponseWriter, r *http.Request) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := f(w, r)
+		if err == nil {
+			return
+		}
+		switch err.(type) {
+		case badRequest:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case notFound:
+			http.Error(w, "task not found", http.StatusNotFound)
+		default:
+			log.Println(err)
+			http.Error(w, "oops", http.StatusInternalServerError)
+		}
+	}
 }
 
-func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	fmt.Fprintf(w, "hello, %s!\n", ps.ByName("name"))
-}
+func ListPuppies(w http.ResponseWriter, r *http.Request) {
+	page := mux.Vars(r)["page"]
+	if page == "" {
+		page = "1"
+	}
+	//tags := mux.Vars(r)["tags"]
+	tags := "puppies,dogs,cute"
 
-func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {	
-	tags := ps.ByName("tags")
-	page := ps.ByName("page")
-	
 	baseUrl, err := url.Parse(FlickrEndPoint)
 	if err != nil {
 		log.Fatal(err)
@@ -43,16 +74,16 @@ func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	params.Add("page", page)
 	params.Add("safe_search", "2")
 	params.Add("sort", "date-posted-desc")
-		
+
 	baseUrl.RawQuery = params.Encode()
-	
+
 	resp, err := http.Get(baseUrl.String())
 	if err != nil {
 		// handle error, send proper error response
 		log.Println(err)
-	}	
+	}
 	defer resp.Body.Close()
-	
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		// handle error, send proper error response
@@ -60,42 +91,54 @@ func FetchPuppies(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	}
 
 	flickrResponse := struct {
-		Stat string `xml:"stat,attr"`
-		Err flickrError `xml:"err"`
+		Stat   string         `xml:"stat,attr"`
+		Err    flickrError    `xml:"err"`
 		Photos SearchResponse `xml:"photos"`
-	}{}	
-	
+	}{}
+
 	xml.Unmarshal([]byte(body), &flickrResponse)
 
 	//stat := flickrResult.Stat
-	//if stat is "ok"	
+	//if stat is "ok"
 	if flickrResponse.Stat != "ok" {
 		println(flickrResponse.Err.Msg)
 		//return error message
-	}	
-	flickrPhotos := flickrResponse.Photos.Photos
-	for i, ph := range flickrPhotos {
-		flickrPhotos[i].Thumbnail_T = ph.URL(SizeThumbnail)
-		flickrPhotos[i].Large_T = ph.URL(SizeLarge)
 	}
 
-	response, err := json.Marshal(flickrPhotos)
+	searchResponse := flickrResponse.Photos
+	flickrPhotos := searchResponse.Photos
+
+	for _, ph := range flickrPhotos {
+		imageManager.Save(imageManager.NewImage(ph))
+	}
+
+	puppiesResponse := imageManager.GetPuppiesResponse(&searchResponse)
+	response, err := json.Marshal(puppiesResponse)
+
 	if err != nil {
-  		http.Error(w, err.Error(), http.StatusInternalServerError)
-	  	  return
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	//return json response	
-	fmt.Fprint(w, string(response))
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
 }
 
-func main() {	
-	router := httprouter.New()
-	
-	router.ServeFiles("/web/*filepath", http.Dir("web"))
-	
-	router.GET("/", Index)
-	router.GET("/hello/:name", Hello)
-	router.GET("/fetch/:page/:tags", FetchPuppies)
-	log.Fatal(http.ListenAndServe(":8080", router))
+func main() {
+	r := mux.NewRouter().StrictSlash(false)
+
+	pups := r.Path(PathPrefix).Subrouter()
+	pups.Methods("GET").HandlerFunc(ListPuppies)
+
+	pupsPerPage := r.Path(PathPrefix + "/{page}").Subrouter()
+	pupsPerPage.Methods("GET").HandlerFunc(ListPuppies)
+
+	http.Handle("/", http.FileServer(http.Dir("static")))
+
+	http.ListenAndServe(":8080", r)
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
