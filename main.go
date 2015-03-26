@@ -24,8 +24,6 @@ const (
 	PathPrefix     = "/pups"
 )
 
-var imageManager = NewImageManager()
-
 // badRequest is handled by setting the status code in the reply to StatusBadRequest.
 type badRequest struct{ error }
 
@@ -108,6 +106,7 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 	searchResponse := flickrResponse.Photos
 	flickrPhotos := searchResponse.Photos
 
+	imageManager := NewImageManager()
 	for _, ph := range flickrPhotos {
 		imageManager.Save(imageManager.NewImage(ph))
 	}
