@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/mseshachalam/go-angular/photo"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -52,15 +53,14 @@ func errorHandler(f func(w http.ResponseWriter, r *http.Request) error) http.Han
 }
 
 func UpdatePuppy(w http.ResponseWriter, r *http.Request) {
-	var v Vote
+	var v photo.Vote
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		//return badRequest{err}
 
 		println("some error");
 	}
 
-	imageManager := NewImageManager()
-	println(v.ID)
+	imageManager := photo.NewImageManager()
 	image, exists := imageManager.Find(v.ID)
 
 	if exists == true{
@@ -110,8 +110,8 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 
 	flickrResponse := struct {
 		Stat   string         `xml:"stat,attr"`
-		Err    flickrError    `xml:"err"`
-		Photos SearchResponse `xml:"photos"`
+		Err    photo.FlickrError    `xml:"err"`
+		Photos photo.SearchResponse `xml:"photos"`
 	}{}
 
 	xml.Unmarshal([]byte(body), &flickrResponse)
@@ -126,7 +126,7 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 	searchResponse := flickrResponse.Photos
 	flickrPhotos := searchResponse.Photos
 
-	imageManager := NewImageManager()
+	imageManager := photo.NewImageManager()
 	for _, ph := range flickrPhotos {
 		imageManager.Save(imageManager.NewImage(ph))
 	}
