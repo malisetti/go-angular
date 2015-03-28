@@ -79,13 +79,6 @@ type Vote struct {
 	VT bool   `json:"vt"`
 }
 
-type DBVote struct {
-	id         int `db:"id" json:"id"`
-	puppy_id   int `db:"puppy_id" json:"puppy_id"`
-	up_votes   int `db:"up_votes" json:"up_votes"`
-	down_votes int `db:"down_votes" json:"down_votes"`
-}
-
 func NewImageManager() *ImageManager {
 	return &ImageManager{}
 }
@@ -169,6 +162,10 @@ func (m *ImageManager) UpdateVotes(puppy_id int, up_vote bool) {
 	return
 }
 
+func (m *ImageManager) SortPuppiesByMostVotes() {
+	//sqlStmt := "select * from votes"
+}
+
 // All returns the list of all the Tasks in the TaskManager.
 func (m *ImageManager) All() []*Image {
 	return m.images
@@ -210,7 +207,7 @@ func (m *ImageManager) GetDB() *sql.DB {
 
 func (m *ImageManager) CreateTables() {
 	createSqlStmt := `
-	create table votes (id integer not null primary key, puppy_id integer unique, up_votes integer, down_votes integer);
+	create table votes (id integer not null primary key, puppy_id integer unique, title string, thumbnail string, large string, up_votes integer, down_votes integer);
 	delete from votes;
 	`
 	_, err := m.db.Exec(createSqlStmt)
@@ -225,7 +222,7 @@ func (m *ImageManager) InsertPuppies(images []*Image) {
 		log.Fatal(err)
 	}
 
-	stmt, err := tx.Prepare("insert into votes(puppy_id, up_votes, down_votes) values(?, ?, ?)")
+	stmt, err := tx.Prepare("insert into votes(puppy_id, title, thumbnail, large, up_votes, down_votes) values(?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -233,7 +230,7 @@ func (m *ImageManager) InsertPuppies(images []*Image) {
 	defer stmt.Close()
 
 	for _, im := range images {
-		_, err = stmt.Exec(im.ID, im.UpVotes, im.DownVotes)
+		_, err = stmt.Exec(im.ID, im.Title, im.Thumbnail, im.Large, im.UpVotes, im.DownVotes)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -242,7 +239,7 @@ func (m *ImageManager) InsertPuppies(images []*Image) {
 	tx.Commit()
 }
 
-func (m *ImageManager) FindOldPuppies(ids []string) []*DBVote {
+func (m *ImageManager) FindOldPuppies(ids []string) []*Image {
 
 	//sqlStmt = "select * from votes where puppy_id in (?" + strings.Repeat(",?", len(ids)-1) + ")"
 
@@ -266,12 +263,13 @@ func (m *ImageManager) FindOldPuppies(ids []string) []*DBVote {
 
 	defer rows.Close()
 
-	var rs []*DBVote
+	var rs []*Image
 
 	for rows.Next() {
-		var dbVote DBVote
-		rows.Scan(&dbVote.id, &dbVote.puppy_id, &dbVote.up_votes, &dbVote.down_votes)
-		rs = append(rs, &dbVote)
+		var dbImage Image
+		var id int
+		rows.Scan(&id, &dbImage.ID, &dbImage.Title, &dbImage.Thumbnail, &dbImage.Large, &dbImage.UpVotes, &dbImage.DownVotes)
+		rs = append(rs, &dbImage)
 	}
 
 	if err = rows.Err(); err != nil {

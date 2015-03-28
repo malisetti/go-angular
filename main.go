@@ -156,18 +156,18 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 		imageManager.InsertPuppies(all)
 	} else {
 		for _, puppy := range dbPuppies {
-			id := puppy.puppy_id
+			id := puppy.ID
 			for _, allP := range all {
-				allPID, _ := strconv.Atoi(allP.ID)
-				if allPID == id {
-					allP.DownVotes = puppy.down_votes
-					allP.UpVotes = puppy.up_votes
+				//allPID, _ := strconv.Atoi(allP.ID)
+				if allP.ID == id {
+					allP.DownVotes = puppy.DownVotes
+					allP.UpVotes = puppy.UpVotes
 				} else {
 					exists := true
 					var existingPuppy *Image
 					for _, np := range newPuppies {
-						nPID, _ := strconv.Atoi(np.ID)
-						if nPID == allPID {
+						//nPID, _ := strconv.Atoi(np.ID)
+						if np.ID == allP.ID {
 							exists = false
 							existingPuppy = allP
 							break
