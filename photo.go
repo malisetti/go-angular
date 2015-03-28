@@ -75,8 +75,8 @@ type ImageManager struct {
 }
 
 type Vote struct {
-	ID string
-	VT bool //true is up, false is down
+	ID string `json:"id"`
+	VT bool   `json:"vt"`
 }
 
 type DBVote struct {
@@ -141,6 +141,32 @@ func (m *ImageManager) Update(image *Image, upOrDown bool) (int, int) {
 	}
 
 	return image.UpVotes, image.DownVotes
+}
+
+func (m *ImageManager) UpdateVotes(puppy_id int, up_vote bool) {
+	sqlStmt := "update votes set "
+	if up_vote == true {
+		sqlStmt += " up_votes = up_votes + 1"
+	} else {
+		sqlStmt += " down_votes = down_votes + 1"
+	}
+
+	sqlStmt += " where puppy_id = ?"
+
+	stmt, err := m.db.Prepare(sqlStmt)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer stmt.Close()
+
+	res, _ := stmt.Exec(puppy_id)
+
+	affect, _ := res.RowsAffected()
+
+	fmt.Println(affect)
+
+	return
 }
 
 // All returns the list of all the Tasks in the TaskManager.

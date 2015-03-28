@@ -55,15 +55,25 @@ func UpdatePuppy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	imageManager := NewImageManager()
-	println(v.ID)
-	image, exists := imageManager.Find(v.ID)
 
-	if exists == true {
-		println(image.ID)
-	} else {
-		println("does not exist")
+	dbError := imageManager.InitDB(false)
+	if dbError != nil {
+		log.Printf("%q\n", dbError)
+		return
 	}
 
+	defer imageManager.GetDB().Close()
+	id, err := strconv.Atoi(v.ID)
+	imageManager.UpdateVotes(id, v.VT)
+
+	response, err := json.Marshal(v)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
 }
 
 func ListPuppies(w http.ResponseWriter, r *http.Request) {
