@@ -245,7 +245,6 @@ func (m *ImageManager) FindOldPuppies(ids []string) []*DBVote {
 	for rows.Next() {
 		var dbVote DBVote
 		rows.Scan(&dbVote.id, &dbVote.puppy_id, &dbVote.up_votes, &dbVote.down_votes)
-		fmt.Println(dbVote.id, dbVote.puppy_id)
 		rs = append(rs, &dbVote)
 	}
 
