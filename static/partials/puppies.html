@@ -2,7 +2,7 @@
 <h2>Total images {{ response.total }}</h2>
 
 <ul class="list-unstyled">
-  <li class="row" ng-repeat="pup in response.images">
+<li class="row" ng-repeat="pup in response.images | orderBy:'upvotes':true">
     <figure>
       <img ng-src="{{ pup.thumbnail }}" data-ng-click="open(pup)" alt="{{ pup.title }}"/>
       <span>{{ pup.upvotes }}<a class="icono-smile" ng-click="upvote(pup)"></a></span>
