@@ -17,6 +17,7 @@ const (
 	FlickrQuery    = "flickr.photos.search"
 	FlickrKey      = "300d436fa36986e197efe2a62682e05b"
 	PathPrefix     = "/pups"
+	TopPupsPrefix  = "/top"
 )
 
 // badRequest is handled by setting the status code in the reply to StatusBadRequest.
@@ -44,6 +45,44 @@ func errorHandler(f func(w http.ResponseWriter, r *http.Request) error) http.Han
 			http.Error(w, "oops", http.StatusInternalServerError)
 		}
 	}
+}
+
+func ListTopPuppies(w http.ResponseWriter, r *http.Request) {
+	page := mux.Vars(r)["page"]
+	if page == "" {
+		page = "0"
+	}
+
+	imageManager := NewImageManager()
+	dbError := imageManager.InitDB(false)
+	if dbError != nil {
+		log.Printf("%q\n", dbError)
+		return
+	}
+
+	defer imageManager.GetDB().Close()
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 0
+	}
+
+	puppies := imageManager.GetPuppiesByMostVotes(pageInt)
+	count := imageManager.GetPuppiesCount()
+
+	perPage := 10
+	pages := count / perPage
+
+	searchResponse := PuppiesResponse{pageInt, pages, perPage, count, puppies}
+
+	response, err := json.Marshal(searchResponse)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
+
 }
 
 func UpdatePuppy(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +235,7 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	imageManager := NewImageManager()
-	dbError := imageManager.InitDB(true)
+	dbError := imageManager.InitDB(false)
 
 	defer imageManager.GetDB().Close()
 
@@ -214,6 +253,12 @@ func main() {
 
 	pupsPerPage := r.Path(PathPrefix + "/{page}").Subrouter()
 	pupsPerPage.Methods("GET").HandlerFunc(ListPuppies)
+
+	topPups := r.Path(TopPupsPrefix).Subrouter()
+	topPups.Methods("GET").HandlerFunc(ListTopPuppies)
+
+	topPupsPerPage := r.Path(TopPupsPrefix + "/{page}").Subrouter()
+	topPupsPerPage.Methods("GET").HandlerFunc(ListTopPuppies)
 
 	pupsUpdate := r.Path(PathPrefix).Subrouter()
 	pupsUpdate.Methods("PUT").HandlerFunc(UpdatePuppy)

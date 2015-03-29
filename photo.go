@@ -89,6 +89,7 @@ func (m *ImageManager) GetPuppiesResponse(searchResponse *SearchResponse) *Puppi
 	perPage, err := strconv.Atoi(searchResponse.PerPage)
 	total, err := strconv.Atoi(searchResponse.Total)
 	if err != nil {
+		log.Println(err)
 		return nil
 	}
 	return &PuppiesResponse{page, pages, perPage, total, m.images}
@@ -162,8 +163,58 @@ func (m *ImageManager) UpdateVotes(puppy_id int, up_vote bool) {
 	return
 }
 
-func (m *ImageManager) SortPuppiesByMostVotes() {
-	//sqlStmt := "select * from votes"
+func (m *ImageManager) GetPuppiesCount() int {
+	query := "select count(id) from votes"
+
+	rows, err := m.db.Query(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		rows.Scan(&count)
+	}
+
+	return count
+}
+
+func (m *ImageManager) GetPuppiesByMostVotes(pageId int) []*Image {
+	perPage := 10
+	if pageId != 0{
+		pageId-- 
+	}
+	start := perPage * pageId
+	query := "select * from votes order by up_votes desc limit ?,?"
+
+	stmt, err := m.db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer stmt.Close()
+	rows, err := stmt.Query(start, perPage)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rows.Close()
+
+	var rs []*Image
+
+	for rows.Next() {
+		var dbImage Image
+		var id int
+		rows.Scan(&id, &dbImage.ID, &dbImage.Title, &dbImage.Thumbnail, &dbImage.Large, &dbImage.UpVotes, &dbImage.DownVotes)
+		rs = append(rs, &dbImage)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return rs
+
 }
 
 // All returns the list of all the Tasks in the TaskManager.
@@ -207,7 +258,7 @@ func (m *ImageManager) GetDB() *sql.DB {
 
 func (m *ImageManager) CreateTables() {
 	createSqlStmt := `
-	create table votes (id integer not null primary key, puppy_id integer unique, title string, thumbnail string, large string, up_votes integer, down_votes integer);
+	create table if not exists votes (id integer not null primary key, puppy_id integer unique, title string, thumbnail string, large string, up_votes integer, down_votes integer);
 	delete from votes;
 	`
 	_, err := m.db.Exec(createSqlStmt)

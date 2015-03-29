@@ -17,6 +17,11 @@
   			return $http.put(puppyUrlBase, vote);
     	};
 
+    	factory.getTopPuppies = function(pageId){
+    		var url = (pageId === undefined || pageId === 0) ? topPuppyUrlBase + "/1" : topPuppyUrlBase + "/" + pageId;
+    		return $http.get(url);
+    	};
+
     	return factory;
 
 	}]);
