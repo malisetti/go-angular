@@ -1,26 +1,21 @@
 // go-angular project main.go
 package main
 
-/*
-"database/sql"
-"fmt"
-*/
 import (
 	"encoding/json"
 	"encoding/xml"
 	"github.com/gorilla/mux"
-	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 const (
 	FlickrEndPoint = "https://api.flickr.com/services/rest"
 	FlickrQuery    = "flickr.photos.search"
 	FlickrKey      = "300d436fa36986e197efe2a62682e05b"
-	DatabaseName   = "puppies.db"
 	PathPrefix     = "/pups"
 )
 
@@ -56,19 +51,29 @@ func UpdatePuppy(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		//return badRequest{err}
 
-		println("some error");
+		println("some error")
 	}
 
 	imageManager := NewImageManager()
-	println(v.ID)
-	image, exists := imageManager.Find(v.ID)
 
-	if exists == true{
-		println(image.ID)
-	}else{
-		println("does not exist")
+	dbError := imageManager.InitDB(false)
+	if dbError != nil {
+		log.Printf("%q\n", dbError)
+		return
 	}
 
+	defer imageManager.GetDB().Close()
+	id, err := strconv.Atoi(v.ID)
+	imageManager.UpdateVotes(id, v.VT)
+
+	response, err := json.Marshal(v)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
 }
 
 func ListPuppies(w http.ResponseWriter, r *http.Request) {
@@ -126,9 +131,56 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 	searchResponse := flickrResponse.Photos
 	flickrPhotos := searchResponse.Photos
 
+	var tempIDs []string
 	imageManager := NewImageManager()
 	for _, ph := range flickrPhotos {
-		imageManager.Save(imageManager.NewImage(ph))
+		img := imageManager.NewImage(ph)
+		imageManager.Save(img)
+		tempIDs = append(tempIDs, img.ID)
+	}
+
+	dbError := imageManager.InitDB(false)
+	if dbError != nil {
+		log.Printf("%q\n", dbError)
+		return
+	}
+	defer imageManager.GetDB().Close()
+
+	all := imageManager.All()
+
+	dbPuppies := imageManager.FindOldPuppies(tempIDs)
+
+	var newPuppies []*Image
+
+	if len(dbPuppies) == 0 {
+		imageManager.InsertPuppies(all)
+	} else {
+		for _, puppy := range dbPuppies {
+			id := puppy.ID
+			for _, allP := range all {
+				//allPID, _ := strconv.Atoi(allP.ID)
+				if allP.ID == id {
+					allP.DownVotes = puppy.DownVotes
+					allP.UpVotes = puppy.UpVotes
+				} else {
+					exists := true
+					var existingPuppy *Image
+					for _, np := range newPuppies {
+						//nPID, _ := strconv.Atoi(np.ID)
+						if np.ID == allP.ID {
+							exists = false
+							existingPuppy = allP
+							break
+						}
+					}
+					if exists == false {
+						newPuppies = append(newPuppies, existingPuppy)
+					}
+				}
+			}
+		}
+
+		imageManager.InsertPuppies(newPuppies)
 	}
 
 	puppiesResponse := imageManager.GetPuppiesResponse(&searchResponse)
@@ -143,6 +195,18 @@ func ListPuppies(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	imageManager := NewImageManager()
+	dbError := imageManager.InitDB(true)
+
+	defer imageManager.GetDB().Close()
+
+	if dbError != nil {
+		log.Printf("%q\n", dbError)
+		return
+	} else {
+		imageManager.CreateTables()
+	}
+
 	r := mux.NewRouter().StrictSlash(false)
 
 	pups := r.Path(PathPrefix).Subrouter()

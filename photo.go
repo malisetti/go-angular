@@ -1,8 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
+	"log"
+	"os"
 	"strconv"
+	"strings"
 )
 
 // Image sizes supported by Flickr.  See
@@ -15,6 +20,7 @@ const (
 	SizeMedium640   = "z"
 	SizeLarge       = "b"
 	SizeOriginal    = "o"
+	DatabaseName    = "puppies.sqlite"
 )
 
 // Response for photo search requests.
@@ -51,8 +57,8 @@ type Image struct {
 	Title     string `json:"title"`
 	Thumbnail string `json:"thumbnail"`
 	Large     string `json:"large"`
-	UpVotes     int    `json:"upvotes"`
-	DownVotes     int    `json:"downvotes"`
+	UpVotes   int    `json:"upvotes"`
+	DownVotes int    `json:"downvotes"`
 }
 
 type PuppiesResponse struct {
@@ -65,11 +71,12 @@ type PuppiesResponse struct {
 
 type ImageManager struct {
 	images []*Image
+	db     *sql.DB
 }
 
 type Vote struct {
-	ID string
-	VT bool //true is up, false is down
+	ID string `json:"id"`
+	VT bool   `json:"vt"`
 }
 
 func NewImageManager() *ImageManager {
@@ -129,6 +136,36 @@ func (m *ImageManager) Update(image *Image, upOrDown bool) (int, int) {
 	return image.UpVotes, image.DownVotes
 }
 
+func (m *ImageManager) UpdateVotes(puppy_id int, up_vote bool) {
+	sqlStmt := "update votes set "
+	if up_vote == true {
+		sqlStmt += " up_votes = up_votes + 1"
+	} else {
+		sqlStmt += " down_votes = down_votes + 1"
+	}
+
+	sqlStmt += " where puppy_id = ?"
+
+	stmt, err := m.db.Prepare(sqlStmt)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer stmt.Close()
+
+	res, _ := stmt.Exec(puppy_id)
+
+	affect, _ := res.RowsAffected()
+
+	fmt.Println(affect)
+
+	return
+}
+
+func (m *ImageManager) SortPuppiesByMostVotes() {
+	//sqlStmt := "select * from votes"
+}
+
 // All returns the list of all the Tasks in the TaskManager.
 func (m *ImageManager) All() []*Image {
 	return m.images
@@ -147,4 +184,97 @@ func (p *Photo) URL(size string) string {
 	}
 	return fmt.Sprintf("http://farm%s.static.flickr.com/%s/%s_%s_%s.jpg",
 		p.Farm, p.Server, p.ID, p.Secret, size)
+}
+
+func (m *ImageManager) InitDB(removeDb bool) error {
+	if removeDb == true {
+		os.Remove("./" + DatabaseName)
+	}
+
+	db, err := sql.Open("sqlite3", "./"+DatabaseName)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	m.db = db
+	return nil
+}
+
+func (m *ImageManager) GetDB() *sql.DB {
+	return m.db
+}
+
+func (m *ImageManager) CreateTables() {
+	createSqlStmt := `
+	create table votes (id integer not null primary key, puppy_id integer unique, title string, thumbnail string, large string, up_votes integer, down_votes integer);
+	delete from votes;
+	`
+	_, err := m.db.Exec(createSqlStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, createSqlStmt)
+	}
+}
+
+func (m *ImageManager) InsertPuppies(images []*Image) {
+	tx, err := m.db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err := tx.Prepare("insert into votes(puppy_id, title, thumbnail, large, up_votes, down_votes) values(?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer stmt.Close()
+
+	for _, im := range images {
+		_, err = stmt.Exec(im.ID, im.Title, im.Thumbnail, im.Large, im.UpVotes, im.DownVotes)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	tx.Commit()
+}
+
+func (m *ImageManager) FindOldPuppies(ids []string) []*Image {
+
+	//sqlStmt = "select * from votes where puppy_id in (?" + strings.Repeat(",?", len(ids)-1) + ")"
+
+	query := fmt.Sprintf("select * from votes where puppy_id in (%s)",
+		strings.Join(strings.Split(strings.Repeat("?", len(ids)), ""), ","))
+
+	stmt, err := m.db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var params []interface{}
+	for _, id := range ids {
+		params = append(params, id)
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(params...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rows.Close()
+
+	var rs []*Image
+
+	for rows.Next() {
+		var dbImage Image
+		var id int
+		rows.Scan(&id, &dbImage.ID, &dbImage.Title, &dbImage.Thumbnail, &dbImage.Large, &dbImage.UpVotes, &dbImage.DownVotes)
+		rs = append(rs, &dbImage)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return rs
 }
