@@ -44,7 +44,6 @@
 
               $http.put(url, vote).
               success(function (data, status, headers, config) {
-                alert(status);
               }).
               error(function (data, status, headers, config) {
                 // called asynchronously if an error occurs
