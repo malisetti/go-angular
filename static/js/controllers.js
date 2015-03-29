@@ -1,8 +1,9 @@
 (function(){
 	'use strict';
 
-	var puppyControllers = angular.module('puppyControllers', ['ngDialog']);
-	puppyControllers.controller('PuppyCtrl', ['$scope', '$http', 'ngDialog', function ($scope, $http, ngDialog) {
+	var puppyControllers = angular.module('puppyControllers', ['puppyFactory', 'ngDialog']);
+	
+	puppyControllers.controller('PuppyCtrl', ['$scope', 'Puppy', 'ngDialog', function ($scope, Puppy, ngDialog) {
     $scope.main = {
       page: 1,
       pages: 1,
@@ -19,11 +20,8 @@
     ,$scope.response.total = 0
     ,$scope.response.images = [];
 
-    $scope.getPuppies = function(){
-      var url = "/pups";
-      url = ($scope.main.page === undefined || $scope.main.page === 0) ? url : url + "/" + $scope.main.page;
-
-      $http.get(url).
+    var getPuppies = function(){
+      Puppy.getPuppies($scope.main.page).
       success(function (data, status, headers, config) {
         $scope.response = data;
         $scope.main.pages = data.pages;
@@ -38,10 +36,8 @@
       });
     };
 
-    $scope.votePuppy = function(vote){
-      var url = "/pups";
-
-      $http.put(url, vote).
+    var votePuppy = function(vote){
+      Puppy.votePuppy(vote).
       success(function (data, status, headers, config) {
       }).
       error(function (data, status, headers, config) {
@@ -73,7 +69,7 @@
         vote.ID = pup.id;
         vote.VT = true;
 
-        $scope.votePuppy(vote);
+        votePuppy(vote);
       }
     }
 
@@ -87,24 +83,24 @@
         vote.ID = pup.id;
         vote.VT = false;
 
-        $scope.votePuppy(vote);
+        votePuppy(vote);
       }
     }
 
 
-    $scope.getPuppies();
+    getPuppies();
 
     $scope.nextPage = function() {
       if ($scope.main.page < $scope.main.pages) {
         $scope.main.page++;
-        $scope.getPuppies();
+        getPuppies();
       }
     };
 
     $scope.previousPage = function() {
       if ($scope.main.page > 1) {
         $scope.main.page--;
-        $scope.getPuppies();
+        getPuppies();
       }
     };
 
