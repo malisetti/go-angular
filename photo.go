@@ -162,8 +162,26 @@ func (m *ImageManager) UpdateVotes(puppy_id int, up_vote bool) {
 	return
 }
 
-func (m *ImageManager) SortPuppiesByMostVotes() {
-	//sqlStmt := "select * from votes"
+func (m *ImageManager) SortPuppiesByMostVotes() []*Image {
+	sqlStmt := "select * from votes order by upvotes"
+
+	rows, err := m.db.Query(sqlStmt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var images []*Image
+	var image *Image
+	for rows.Next() {
+		var id int
+		rows.Scan(&id, &image.ID, &image.Title, &image.Thumbnail, &image.Large, &image.UpVotes, &image.DownVotes)
+		images = append(images, image)
+	}
+
+	rows.Close()
+
+	return images
 }
 
 // All returns the list of all the Tasks in the TaskManager.
