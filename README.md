@@ -1,4 +1,5 @@
-# go-angular [USAGE](https://github.com/mseshachalam/go-angular/blob/master/USAGE.md)
+# go-angular
+##[USAGE](https://github.com/mseshachalam/go-angular/blob/master/USAGE.md)
 
 angular js web app(backed by golang) to show and rate cute puppies
 
