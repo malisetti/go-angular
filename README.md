@@ -1,5 +1,6 @@
 # go-angular
-##[USAGE](https://github.com/mseshachalam/go-angular/blob/master/USAGE.md)
+[USAGE](https://github.com/mseshachalam/go-angular/blob/master/USAGE.md) 
+[TODO](https://github.com/mseshachalam/go-angular/blob/master/TODO.md)
 
 angular js web app(backed by golang) to show and rate cute puppies
 
