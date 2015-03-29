@@ -1,4 +1,5 @@
-# go-angular
+# go-angular [USAGE](https://github.com/mseshachalam/go-angular/blob/master/USAGE.md)
+
 angular js web app(backed by golang) to show and rate cute puppies
 
 1. create http server with go
