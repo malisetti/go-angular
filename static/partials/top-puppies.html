@@ -1,0 +1,17 @@
+<h1>Most voted Cute puppies, cats and remaining</h1>
+<h2>Total images {{ response.total }}</h2>
+
+<ul class="list-unstyled">
+  <li class="row" ng-repeat="pup in response.images">
+    <figure>
+      <img ng-src="{{ pup.thumbnail }}" data-ng-click="open(pup)" alt="{{ pup.title }}"/>
+      <span>{{ pup.upvotes }}<a class="icono-smile" ng-click="upvote(pup)"></a></span>
+      <span>{{ pup.downvotes }}<a class="icono-frown" ng-click="downvote(pup)"></a></span>
+      <figcaption>{{ pup.title }}</figcaption>
+    </figure>
+    <br class="clearfix" />
+  </li>
+</ul>
+
+<button ng-hide='main.page <= 1' ng-click='previousPage()'>Previous</button>
+<button ng-hide='main.page >= main.pages' ng-click='nextPage()'>Next</button>
